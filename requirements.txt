@@ -1,0 +1,13 @@
+python-dotenv
+jupyter
+google-auth
+google-cloud-bigquery-storage
+google-cloud-bigquery[pandas]
+google-cloud-storage
+pydicom
+pandas
+numpy
+matplotlib
+seaborn
+scikit-learn
+tqdm
