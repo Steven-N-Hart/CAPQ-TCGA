@@ -6,8 +6,9 @@ import numpy as np
 import logging
 from PIL import Image
 import pydicom
-from utils.utils import get_single_dcm_img
 import os
+
+
 class Minipath:
     def __init__(self, img: Image.Image):
         """
@@ -17,7 +18,8 @@ class Minipath:
         """
         self.img = img
 
-    def entropy_from_histogram(self, histogram: list[int]) -> float:
+    @staticmethod
+    def entropy_from_histogram(histogram: list[int]) -> float:
         """
         Compute entropy from a histogram.
 
@@ -53,7 +55,8 @@ class Minipath:
 
         return feature_vector
 
-    def determine_optimal_components(self, scaled_features: np.ndarray, explained_variance: float = 0.8) -> int:
+    @staticmethod
+    def determine_optimal_components(scaled_features: np.ndarray, explained_variance: float = 0.8) -> int:
         """
         Determine the optimal number of PCA components.
 
@@ -68,7 +71,8 @@ class Minipath:
         logging.debug(f'n_components: {n_components}, cum_exp_variance: {cum_exp_variance}')
         return n_components
 
-    def calculate_euclidean(self, pca_features: np.ndarray, centroids: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    @staticmethod
+    def calculate_euclidean(pca_features: np.ndarray, centroids: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """
         Calculate Euclidean distances between PCA features and centroids.
 
@@ -81,7 +85,8 @@ class Minipath:
         ordered_samples_idx = np.argsort(np.sum(distances, axis=0))
         return closest_samples_idx, ordered_samples_idx
 
-    def determine_optimal_clusters(self, features: np.ndarray, max_k: int = 50) -> int:
+    @staticmethod
+    def determine_optimal_clusters(features: np.ndarray, max_k: int = 50) -> int:
         """
         Determine the optimal number of clusters using the elbow method.
 
@@ -111,7 +116,7 @@ class Minipath:
         return elbow_k
 
     def rank_patches_for_diversity(
-        self, img_size: int = 256, patch_size: int = 8, explained_variance: float = 0.9, max_k: int = 50
+            self, img_size: int = 256, patch_size: int = 8, explained_variance: float = 0.9, max_k: int = 50
     ) -> dict:
         """
         Rank patches for diversity using clustering and PCA.
@@ -189,23 +194,27 @@ class MagPairs:
         self.scaling_factor = int(self.pixel_spacing_at_low_mag / self.pixel_spacing_at_high_mag)
         self.fd = self.get_frame_dict(self.high_mag_dcm)
         self.minmax_list = self.get_minmax(img_to_use_at_low_mag)
-        self.high_mag_frame_list = [self.find_intersecting_frames(self.fd, m['x_min'], m['x_max'], m['y_min'], m['y_max']) for m in self.minmax_list]
+        self.high_mag_frame_list = [
+            self.find_intersecting_frames(self.fd, m['x_min'], m['x_max'], m['y_min'], m['y_max']) for m in
+            self.minmax_list]
         self.high_mag_frames = self.frame_extraction(self.high_mag_dcm, self.high_mag_frame_list)
         self.clean_high_mag_frames = [frame for frame in self.high_mag_frames if self.is_foreground(frame['img_array'])]
 
-    def is_foreground(self, tile) -> bool:
+    @staticmethod
+    def is_foreground(tile) -> bool:
         """
         Function to determine if a tile shows mainly tissue (foreground) or background.
         Returns True if tile shows <= 50% background and False otherwise.
         """
-        if type(tile) == np.ndarray:
+        if isinstance(tile, np.ndarray):
             tile = Image.fromarray(tile)
         grey = tile.convert(mode='L')
         thresholded = grey.point(lambda x: 0 if x < 220 else 1, mode='F')
         avg_bkg = np.average(np.array(thresholded))
         return avg_bkg <= 0.5
 
-    def frame_extraction(self, dcm, high_mag_frame_list):
+    @staticmethod
+    def frame_extraction(dcm, high_mag_frame_list):
         img_array_list = list()
         pixel_array = dcm.pixel_array
         for high_mag_frame in high_mag_frame_list:
@@ -215,10 +224,13 @@ class MagPairs:
                 img_array_list.append(j)
         return img_array_list
 
-    def get_local_name(self, gcs_url, data_dir):
+    @staticmethod
+    def get_local_name(gcs_url, data_dir):
         blob = '/'.join(gcs_url.values[0].split('/')[3:])
         return os.path.join(data_dir, blob)
-    def find_intersecting_frames(self, fd, x_min, x_max, y_min, y_max):
+
+    @staticmethod
+    def find_intersecting_frames(fd, x_min, x_max, y_min, y_max):
         """
         Find all frames that intersect with the given coordinates.
 
@@ -254,17 +266,19 @@ class MagPairs:
             y_min = raw_ranges[1] * self.scaling_factor
             y_max = (raw_ranges[1] + y_range) * self.scaling_factor
             logging.debug(
-                f'x_min: {x_min}, x_max: {x_max}, y_min: {y_min}, y_max: {y_max}, x_range: {x_range}, y_range: {y_range}, '
-                f'raw_ranges:{raw_ranges} ')
+                f'x_min: {x_min}, x_max: {x_max}, y_min: {y_min}, y_max: {y_max}, '
+                f'x_range: {x_range}, y_range: {y_range}, raw_ranges:{raw_ranges} ')
             minmax_list.append({'x_min': x_min, 'x_max': x_max, 'y_min': y_min, 'y_max': y_max, 'x_range': x_range})
         return minmax_list
+
     def get_local_dcm_pair(self, dcm, bq_results_df, data_dir):
         gcs_url_pair = bq_results_df['gcs_url'][
             (bq_results_df['digital_slide_id'] == dcm.SeriesInstanceUID) & (bq_results_df['row_num_desc'] == 1)]
         local_pair_name = self.get_local_name(gcs_url_pair, data_dir)
         return pydicom.dcmread(local_pair_name)
 
-    def _load_dcm(self, dcm_input):
+    @staticmethod
+    def _load_dcm(dcm_input):
         if isinstance(dcm_input, str):
             dcm = pydicom.dcmread(dcm_input)
         elif isinstance(dcm_input, pydicom.dataset.FileDataset):
@@ -272,28 +286,15 @@ class MagPairs:
         else:
             raise ValueError("Input must be a DICOM file path string or a pydicom DICOM object")
         return dcm
-    def get_pixel_spacing(self, dcm):
+
+    @staticmethod
+    def get_pixel_spacing(dcm):
         return float(dcm.SharedFunctionalGroupsSequence[0].PixelMeasuresSequence[0].PixelSpacing[0])
 
-
-
-    def get_frame_dict(self, dcm_input):
-        if isinstance(dcm_input, str):
-            dcm = pydicom.dcmread(dcm_input)
-        elif isinstance(dcm_input, pydicom.dataset.FileDataset):
-            dcm = dcm_input
-        else:
-            raise ValueError("Input must be a DICOM file path string or a pydicom DICOM object")
-        # Extract necessary metadata
-        total_pixel_matrix_columns = dcm.TotalPixelMatrixColumns
-        total_pixel_matrix_rows = dcm.TotalPixelMatrixRows
-        columns = dcm.Columns
-        rows = dcm.Rows
-
-        # Calculate grid size
-        grid_cols = int(np.ceil(total_pixel_matrix_columns / columns))
-        grid_rows = int(np.ceil(total_pixel_matrix_rows / rows))
-
+    @staticmethod
+    def get_frame_dict(dcm_input):
+        dcm, total_pixel_matrix_columns, total_pixel_matrix_rows, columns, rows, grid_rows, grid_cols = parse_dcm_info(
+            dcm_input)
         frame_list = list()
         frame_index = 0
         for row in range(grid_rows):
@@ -304,3 +305,50 @@ class MagPairs:
 
         return frame_list
 
+
+def get_single_dcm_img(dcm_input) -> np.ndarray:
+    dcm, total_pixel_matrix_columns, total_pixel_matrix_rows, columns, rows, grid_rows, grid_cols = parse_dcm_info(
+        dcm_input)
+
+    # Assuming your array is named 'frames' and has shape (~72, 256, 256, 3)
+    frames = dcm.pixel_array
+
+    # Create an empty array to hold the grid
+    frame_height, frame_width, channels = frames.shape[1:]
+    grid_array = np.zeros((grid_rows * frame_height, grid_cols * frame_width, channels), dtype=np.uint8)
+
+    # Populate the grid array using nested loops
+    frame_index = 0
+    for row in range(grid_rows):
+        for col in range(grid_cols):
+            if frame_index < frames.shape[0]:
+                grid_array[row * frame_height:(row + 1) * frame_height, col * frame_width:(col + 1) * frame_width, :] =\
+                    frames[frame_index]
+                frame_index += 1
+
+    # Convert the array to an image
+    return grid_array
+
+
+def dcm_checker(dcm_input):
+    if isinstance(dcm_input, str):
+        dcm = pydicom.dcmread(dcm_input)
+    elif isinstance(dcm_input, pydicom.dataset.FileDataset):
+        dcm = dcm_input
+    else:
+        raise ValueError("Input must be a DICOM file path string or a pydicom DICOM object")
+    return dcm
+
+
+def parse_dcm_info(dcm_input):
+    dcm = dcm_checker(dcm_input)
+    # Extract necessary metadata
+    total_pixel_matrix_columns = dcm.TotalPixelMatrixColumns
+    total_pixel_matrix_rows = dcm.TotalPixelMatrixRows
+    columns = dcm.Columns
+    rows = dcm.Rows
+
+    # Calculate grid size
+    grid_cols = int(np.ceil(total_pixel_matrix_columns / columns))
+    grid_rows = int(np.ceil(total_pixel_matrix_rows / rows))
+    return dcm, total_pixel_matrix_columns, total_pixel_matrix_rows, columns, rows, grid_rows, grid_cols

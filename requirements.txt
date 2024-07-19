@@ -4,10 +4,11 @@ google-auth
 google-cloud-bigquery-storage
 google-cloud-bigquery[pandas]
 google-cloud-storage
-pydicom
+pydicom~=2.4.4
 pandas
-numpy
+numpy~=1.26.4
 matplotlib
 seaborn
-scikit-learn
+scikit-learn~=1.5.1
 tqdm
+pillow~=10.4.0
