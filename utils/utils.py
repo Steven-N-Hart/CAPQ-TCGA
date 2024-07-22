@@ -24,4 +24,7 @@ def download_public_file(bucket_name, source_blob_name, destination_file_name):
     )
 
 
-
+def write_array_to_bucket(bucket_name):
+    # Instantiates a client
+    storage_client = storage.Client()
+    bucket = client.bucket(bucket_name)
