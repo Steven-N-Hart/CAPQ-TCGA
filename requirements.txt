@@ -1,8 +1,11 @@
 python-dotenv
 jupyter
 google-auth
+google-cloud-aiplatform
+google-cloud-bigquery
 google-cloud-bigquery-storage
 google-cloud-bigquery[pandas]
+google-cloud-resource-manager
 google-cloud-storage
 pydicom~=2.4.4
 pandas
@@ -11,4 +14,6 @@ matplotlib
 seaborn
 scikit-learn~=1.5.1
 tqdm
+torch
+transformers
 pillow~=10.4.0
