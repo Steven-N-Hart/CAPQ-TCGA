@@ -1,3 +1,4 @@
+import pandas as pd
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
@@ -8,6 +9,9 @@ from PIL import Image
 import pydicom
 import os
 from io import BytesIO
+from google.cloud import storage
+from utils import download_public_file
+import pandas as pd
 
 
 def read_dicom(dcm_input):
@@ -17,12 +21,16 @@ def read_dicom(dcm_input):
     :param dcm_input: Local file path or GCS path.
     :return: pydicom FileDataset object.
     """
-    if dcm_input.startswith('gs://'):
-        # Read DICOM from GCS
-        return read_dicom_from_gcs(dcm_input)
-    else:
-        # Read local DICOM file
-        return pydicom.dcmread(dcm_input)
+    if isinstance(dcm_input, pd.Series):
+        dcm_input = dcm_input.values[0]
+    if isinstance(dcm_input, str):
+        if dcm_input.startswith('gs://'):
+            # Read DICOM from GCS
+            return read_dicom_from_gcs(dcm_input)
+        else:
+            # Read local DICOM file
+            return pydicom.dcmread(dcm_input)
+    raise f"Could not complete with {dcm_input}"
 
 def read_dicom_from_gcs(gcs_path):
     """
@@ -37,11 +45,13 @@ def read_dicom_from_gcs(gcs_path):
     file_name = '/'.join(path_parts[1:])
 
     # Initialize a client and get the bucket
-    client = storage.Client()
-    bucket = client.get_bucket(bucket_name)
-
+    try:
+        client = storage.Client()
+        bucket = client.get_bucket(bucket_name)
+        blob = bucket.blob(file_name)
+    except :
+        blob = download_public_file(bucket_name, file_name, gcs_path, local=False)
     # Download the file as a bytes object
-    blob = bucket.blob(file_name)
     dicom_bytes = blob.download_as_bytes()
 
     # Use pydicom to read the DICOM file from bytes
@@ -226,9 +236,9 @@ class Minipath:
 
 
 class MagPairs:
-    def __init__(self, low_mag_dcm, img_to_use_at_low_mag=None, bq_results_df=None, data_dir=None):
+    def __init__(self, low_mag_dcm, img_to_use_at_low_mag=None, bq_results_df=None):
         self.low_mag_dcm = self._load_dcm(low_mag_dcm)
-        self.high_mag_dcm = self._load_dcm(self.get_local_dcm_pair(low_mag_dcm, bq_results_df, data_dir))
+        self.high_mag_dcm = self._load_dcm(self.get_local_dcm_pair(low_mag_dcm, bq_results_df))
         self.low_mag_img = get_single_dcm_img(low_mag_dcm)
         self.pixel_spacing_at_low_mag = self.get_pixel_spacing(low_mag_dcm)
         self.pixel_spacing_at_high_mag = self.get_pixel_spacing(self.high_mag_dcm)
@@ -313,11 +323,11 @@ class MagPairs:
             minmax_list.append({'x_min': x_min, 'x_max': x_max, 'y_min': y_min, 'y_max': y_max, 'x_range': x_range})
         return minmax_list
 
-    def get_local_dcm_pair(self, dcm, bq_results_df, data_dir):
+    def get_local_dcm_pair(self, dcm, bq_results_df):
         gcs_url_pair = bq_results_df['gcs_url'][
             (bq_results_df['SeriesInstanceUID'] == dcm.SeriesInstanceUID) & (bq_results_df['row_num_desc'] == 1)]
-        local_pair_name = self.get_local_name(gcs_url_pair, data_dir)
-        return read_dicom(local_pair_name)
+        #local_pair_name = self.get_local_name(gcs_url_pair, data_dir)
+        return read_dicom(gcs_url_pair)
 
     @staticmethod
     def _load_dcm(dcm_input):
