@@ -273,7 +273,7 @@ class MagPairs:
 
     def get_local_dcm_pair(self, dcm, bq_results_df, data_dir):
         gcs_url_pair = bq_results_df['gcs_url'][
-            (bq_results_df['digital_slide_id'] == dcm.SeriesInstanceUID) & (bq_results_df['row_num_desc'] == 1)]
+            (bq_results_df['SeriesInstanceUID'] == dcm.SeriesInstanceUID) & (bq_results_df['row_num_desc'] == 1)]
         local_pair_name = self.get_local_name(gcs_url_pair, data_dir)
         return pydicom.dcmread(local_pair_name)
 
@@ -307,27 +307,35 @@ class MagPairs:
 
 
 def get_single_dcm_img(dcm_input) -> np.ndarray:
-    dcm, total_pixel_matrix_columns, total_pixel_matrix_rows, columns, rows, grid_rows, grid_cols = parse_dcm_info(
-        dcm_input)
+    dcm, total_pixel_matrix_columns, total_pixel_matrix_rows, columns, rows, grid_rows, grid_cols = parse_dcm_info(dcm_input)
 
-    # Assuming your array is named 'frames' and has shape (~72, 256, 256, 3)
     frames = dcm.pixel_array
 
+    if len(frames.shape) != 4:
+        raise ValueError("Expected frames to have shape (num_frames, height, width, channels)")
+
+    num_frames, frame_height, frame_width, channels = frames.shape
+
+    if grid_rows * grid_cols != num_frames:
+        raise ValueError(f"Expected {grid_rows * grid_cols} frames, but got {num_frames}")
+
     # Create an empty array to hold the grid
-    frame_height, frame_width, channels = frames.shape[1:]
     grid_array = np.zeros((grid_rows * frame_height, grid_cols * frame_width, channels), dtype=np.uint8)
 
     # Populate the grid array using nested loops
     frame_index = 0
     for row in range(grid_rows):
         for col in range(grid_cols):
-            if frame_index < frames.shape[0]:
-                grid_array[row * frame_height:(row + 1) * frame_height, col * frame_width:(col + 1) * frame_width, :] =\
-                    frames[frame_index]
+            if frame_index < num_frames:
+                start_row = row * frame_height
+                end_row = (row + 1) * frame_height
+                start_col = col * frame_width
+                end_col = (col + 1) * frame_width
+                grid_array[start_row:end_row, start_col:end_col, :] = frames[frame_index]
                 frame_index += 1
 
-    # Convert the array to an image
     return grid_array
+
 
 
 def dcm_checker(dcm_input):
