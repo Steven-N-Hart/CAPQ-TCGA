@@ -47,8 +47,8 @@ def main(project_id, bucket_name, folder_prefix, dataset_name, table_name, model
             # Prepare row for BigQuery
             row = {
                 "image_name": '/'.join(blob.name.split('/')[1:]),
-                'SeriesInstanceUID': os.path.dirname(blob.name).replace(folder_prefix, ''),
-                'SOPInstanceUID': os.path.basename(blob.name).replace(folder_prefix, ''),
+                'SeriesInstanceUID': os.path.dirname(blob.name).replace(folder_prefix, '').replace('/',''),
+                'SOPInstanceUID': os.path.basename(blob.name).replace(folder_prefix, '').replace('/',''),
                 "embedding": embedding.tolist()
             }
             rows_to_insert.append(row)

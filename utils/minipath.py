@@ -7,6 +7,47 @@ import logging
 from PIL import Image
 import pydicom
 import os
+from io import BytesIO
+
+
+def read_dicom(dcm_input):
+    """
+    Load a DICOM file from a local path or Google Cloud Storage.
+
+    :param dcm_input: Local file path or GCS path.
+    :return: pydicom FileDataset object.
+    """
+    if dcm_input.startswith('gs://'):
+        # Read DICOM from GCS
+        return read_dicom_from_gcs(dcm_input)
+    else:
+        # Read local DICOM file
+        return pydicom.dcmread(dcm_input)
+
+def read_dicom_from_gcs(gcs_path):
+    """
+    Read a DICOM file from Google Cloud Storage.
+
+    :param gcs_path: GCS path to the DICOM file.
+    :return: pydicom FileDataset object.
+    """
+    # Split the GCS path to get bucket and file name
+    path_parts = gcs_path.replace('gs://', '').split('/')
+    bucket_name = path_parts[0]
+    file_name = '/'.join(path_parts[1:])
+
+    # Initialize a client and get the bucket
+    client = storage.Client()
+    bucket = client.get_bucket(bucket_name)
+
+    # Download the file as a bytes object
+    blob = bucket.blob(file_name)
+    dicom_bytes = blob.download_as_bytes()
+
+    # Use pydicom to read the DICOM file from bytes
+    dicom_file = pydicom.dcmread(BytesIO(dicom_bytes))
+
+    return dicom_file
 
 
 class Minipath:
@@ -200,6 +241,7 @@ class MagPairs:
         self.high_mag_frames = self.frame_extraction(self.high_mag_dcm, self.high_mag_frame_list)
         self.clean_high_mag_frames = [frame for frame in self.high_mag_frames if self.is_foreground(frame['img_array'])]
 
+
     @staticmethod
     def is_foreground(tile) -> bool:
         """
@@ -275,7 +317,7 @@ class MagPairs:
         gcs_url_pair = bq_results_df['gcs_url'][
             (bq_results_df['SeriesInstanceUID'] == dcm.SeriesInstanceUID) & (bq_results_df['row_num_desc'] == 1)]
         local_pair_name = self.get_local_name(gcs_url_pair, data_dir)
-        return pydicom.dcmread(local_pair_name)
+        return read_dicom(local_pair_name)
 
     @staticmethod
     def _load_dcm(dcm_input):
