@@ -46,7 +46,7 @@ def main(project_id, bucket_name, folder_prefix, dataset_name, table_name, model
 
             # Prepare row for BigQuery
             row = {
-                "image_name": blob.name,
+                "image_name": '/'.join(blob.name.split('/')[1:]),
                 "embedding": embedding.tolist()
             }
             rows_to_insert.append(row)
