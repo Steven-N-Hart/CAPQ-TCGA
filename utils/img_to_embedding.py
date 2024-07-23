@@ -5,12 +5,9 @@ import torch
 from PIL import Image
 import io
 import logging
-from dotenv import load_dotenv
-load_dotenv("../.env")
 
 logger = logging.getLogger()
-GCP_PROJECT_ID = os.environ.get('GCP_PROJECT_ID')
-assert GCP_PROJECT_ID is not None, 'GCP_PROJECT_ID must be set'
+
 
 
 def get_image_embedding(image, processor, model):
@@ -25,14 +22,14 @@ def upload_to_bigquery(rows, dataset_name, table_name, bq_client):
     if errors:
         logger.error(f"Encountered errors while inserting rows: {errors}")
 
-def main(bucket_name, folder_prefix, dataset_name, table_name, model_name):
+def main(project_id, bucket_name, folder_prefix, dataset_name, table_name, model_name):
     # Initialize the Google Cloud clients
     storage_client = storage.Client()
-    bq_client = bigquery.Client(project=GCP_PROJECT_ID)
+    bq_client = bigquery.Client(project=project_id)
 
     # Initialize the Hugging Face model and processor
     processor = AutoImageProcessor.from_pretrained(model_name, use_fast=True)
-    model = AutoModel.from_pretrained(model_name, use_fast=True)
+    model = AutoModel.from_pretrained(model_name)
 
     bucket = storage_client.bucket(bucket_name)
 
@@ -65,6 +62,7 @@ if __name__ == '__main__':
     parser.add_argument('--dataset_name', type=str, help='BigQuery Dataset Name', default='tcga')
     parser.add_argument('--table_name', type=str, help='BigQuery Table Name', default='phikon')
     parser.add_argument('--model_name', type=str, help='BigQuery Dataset Name', default='owkin/phikon')
+    parser.add_argument('--project_id', type=str, help='Project ID', default='correlation-aware-pq')
 
     args = parser.parse_args()
-    main(args.bucket_name, args.folder_prefix, args.dataset_name, args.table_name, args.model_name)
+    main(args.project_id, args.bucket_name, args.folder_prefix, args.dataset_name, args.table_name, args.model_name)

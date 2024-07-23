@@ -39,7 +39,7 @@ if __name__ == '__main__':
         display_name=args.display_name,
         script_path=script_path,
         container_uri=args.container_uri,
-        requirements=['transformers', 'google-cloud-storage', 'google-cloud-bigquery','google-cloud-resource-manager', 'dotenv'],
+        requirements=['transformers', 'google-cloud-storage', 'google-cloud-bigquery','google-cloud-resource-manager', 'python-dotenv'],
         args=[
             '--bucket_name', args.bucket_name,
             '--folder_prefix', args.folder_prefix,
