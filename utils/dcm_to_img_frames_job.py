@@ -17,7 +17,7 @@ if __name__ == '__main__':
     parser.add_argument('--container_uri', type=str, help='Display name for VertexAI job', default='gcr.io/correlation-aware-pq/dcm_to_img_frames_job:latest')
     parser.add_argument('--staging_bucket', type=str, help='Staging bucket', default='staging')
     parser.add_argument('--machine_type', type=str, help='Machine type', default='n1-highmem-32')
-    parser.add_argument('--replica_count', type=str, help='Number of replicas', default=12)
+    parser.add_argument('--replica_count', type=int, help='Number of replicas', default=12)
 
     args = parser.parse_args()
 
