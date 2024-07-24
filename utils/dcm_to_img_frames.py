@@ -6,7 +6,7 @@ import io
 from google.cloud import storage
 import pandas as pd
 import logging
-
+from google.api_core.retry import Retry
 
 logger = logging.getLogger()
 
@@ -55,7 +55,23 @@ class DicomProcessor:
             img.save(img_byte_arr, format='PNG')
             img_byte_arr.seek(0)
             blob = self.bucket.blob(fname)
-            blob.upload_from_file(img_byte_arr, content_type='image/png')
+
+            # Retry configuration
+            retry_strategy = Retry(
+                initial=1.0,  # initial delay in seconds
+                maximum=30.0,  # maximum delay in seconds
+                multiplier=2.0,  # exponential backoff multiplier
+                deadline=300.0  # overall deadline in seconds
+            )
+
+            try:
+                blob.upload_from_file(img_byte_arr, content_type='image/png', retry=retry_strategy)
+                logger.info(f"Uploaded {fname} to GCS bucket {self.bucket_name}")
+            except Exception as e:
+                logger.error(f"Failed to upload {fname} to GCS bucket {self.bucket_name}: {e}")
+
+
+
 
 def main(bq_results_csv, bucket_name, dirname):
     if isinstance(bq_results_csv, str):
