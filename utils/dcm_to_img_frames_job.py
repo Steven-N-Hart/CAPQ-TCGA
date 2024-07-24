@@ -18,8 +18,11 @@ if __name__ == '__main__':
     parser.add_argument('--staging_bucket', type=str, help='Staging bucket', default='staging')
     parser.add_argument('--machine_type', type=str, help='Machine type', default='n1-highmem-32')
     parser.add_argument('--replica_count', type=int, help='Number of replicas', default=12)
+    parser.add_argument('--verbosity', help='Logging level',
+                        choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'], default='INFO')
 
     args = parser.parse_args()
+    logger.setLevel(args.verbosity)
 
     # Initialize Vertex AI
     staging_bucket = f'gs://{args.bucket_name}/{args.staging_bucket}'

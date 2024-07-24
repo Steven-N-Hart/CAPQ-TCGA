@@ -18,8 +18,12 @@ if __name__ == '__main__':
     parser.add_argument('--display_name', type=str, help='Display name for VertexAI job', default='image-embedding-job')
     parser.add_argument('--container_uri', type=str, help='Display name for VertexAI job', default='us-docker.pkg.dev/vertex-ai/training/pytorch-gpu.1-13.py310:latest')
     parser.add_argument('--staging_bucket', type=str, help='Staging bucket', default='staging')
+    parser.add_argument('--verbosity', help='Logging level',
+                        choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'], default='INFO')
 
     args = parser.parse_args()
+    logger.setLevel(args.verbosity)
+
     # Initialize Vertex AI
     staging_bucket = f'gs://{args.bucket_name}/{args.staging_bucket}'
     # Initialize Vertex AI
