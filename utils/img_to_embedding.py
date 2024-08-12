@@ -18,9 +18,12 @@ def get_image_embedding(image, processor, model):
 
 def upload_to_bigquery(rows, dataset_name, table_name, bq_client):
     table_id = f'{dataset_name}.{table_name}'
-    errors = bq_client.insert_rows_json(table_id, rows)
-    if errors:
-        logger.error(f"Encountered errors while inserting rows: {errors}")
+    try:
+        errors = bq_client.insert_rows_json(table_id, rows)
+        if errors:
+            logger.error(f"Encountered errors while inserting rows: {errors}")
+    except Exception as e:
+        logger.error(e)
 
 def main(project_id, bucket_name, folder_prefix, dataset_name, table_name, model_name):
     # Initialize the Google Cloud clients

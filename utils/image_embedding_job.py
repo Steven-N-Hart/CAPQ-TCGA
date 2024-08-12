@@ -10,7 +10,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Process images and store embeddings in BigQuery.')
     parser.add_argument('--gcp_project_id', type=str, help='Google Cloud Project ID', default='correlation-aware-pq')
     parser.add_argument('--bucket_name', type=str, help='Google Cloud Storage bucket name', default='capq-tcga')
-    parser.add_argument('--folder_prefix', type=str, help='Folder prefix in the bucket to look for images', default='workspace')
+    parser.add_argument('--folder_prefix', type=str, help='Folder prefix in the bucket to look for images', default='data')
     parser.add_argument('--dataset_name', type=str, help='BigQuery Dataset Name', default='tcga')
     parser.add_argument('--table_name', type=str, help='BigQuery Table Name', default='phikon')
     parser.add_argument('--model_name', type=str, help='BigQuery Dataset Name', default='owkin/phikon')
@@ -20,6 +20,8 @@ if __name__ == '__main__':
     parser.add_argument('--staging_bucket', type=str, help='Staging bucket', default='staging')
     parser.add_argument('--verbosity', help='Logging level',
                         choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'], default='INFO')
+    parser.add_argument('--machine_type', type=str, help='Machine type', default='n1-highmem-32')
+    parser.add_argument('--replica_count', type=int, help='Number of replicas', default=12)
 
     args = parser.parse_args()
     logger.setLevel(args.verbosity)
@@ -47,7 +49,9 @@ if __name__ == '__main__':
             '--model_name', args.model_name,
         ],
         project=args.gcp_project_id,
-        location=args.location
+        location=args.location,
+        machine_type=args.machine_type,
+        replica_count=args.replica_count
     )
     logger.debug(f'Submitting job...')
     job.run()
