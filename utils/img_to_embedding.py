@@ -41,6 +41,7 @@ def main(project_id, bucket_name, folder_prefix, dataset_name, table_name, model
 
     # Process each image in the bucket
     rows_to_insert = []
+    i = 0
     for blob in blobs:
         if blob.name.endswith('.png'):
             image_data = blob.download_as_bytes()
@@ -55,10 +56,14 @@ def main(project_id, bucket_name, folder_prefix, dataset_name, table_name, model
                 "embedding": embedding.tolist()
             }
             rows_to_insert.append(row)
+            i += 1
+            if i % 100 == 0:
+                logger.info(f"Processed {i} rows")
 
-    # Upload embeddings to BigQuery
-    upload_to_bigquery(rows_to_insert, dataset_name, table_name, bq_client)
-    logger.info("Embeddings uploaded successfully.")
+
+        # Upload embeddings to BigQuery
+        upload_to_bigquery(rows_to_insert, dataset_name, table_name, bq_client)
+        #logger.info("Embeddings uploaded successfully.")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Submit AI training Job to process images and store embeddings in BigQuery.')

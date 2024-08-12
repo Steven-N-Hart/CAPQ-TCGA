@@ -22,6 +22,8 @@ if __name__ == '__main__':
                         choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'], default='INFO')
     parser.add_argument('--machine_type', type=str, help='Machine type', default='n1-highmem-32')
     parser.add_argument('--replica_count', type=int, help='Number of replicas', default=12)
+    parser.add_argument('--accelerator', help='Number of replicas', default='NVIDIA_TESLA_P100')
+    parser.add_argument('--accelerator_count', type=int, help='Number of GPUs', default=4)
 
     args = parser.parse_args()
     logger.setLevel(args.verbosity)
@@ -51,7 +53,9 @@ if __name__ == '__main__':
         project=args.gcp_project_id,
         location=args.location,
         machine_type=args.machine_type,
-        replica_count=args.replica_count
+        replica_count=args.replica_count,
+        accelerator_count=args.accelerator_count,
+        accelerator_type=args.accelerator
     )
     logger.debug(f'Submitting job...')
     job.run()
