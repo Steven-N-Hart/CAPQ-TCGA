@@ -1,5 +1,7 @@
 import argparse
 from google.cloud import storage, bigquery
+from google.api_core.retry import Retry
+
 from transformers import AutoImageProcessor, AutoModel
 import torch
 from PIL import Image
@@ -10,20 +12,31 @@ logger = logging.getLogger()
 
 
 
-def get_image_embedding(image, processor, model):
-    inputs = processor(images=image, return_tensors="pt")
+retry = Retry(
+    initial=1.0,
+    maximum=10.0,
+    multiplier=2.0,
+    deadline=60.0,
+)
+
+def get_image_embedding(image, processor, model, device):
+    inputs = processor(images=image, return_tensors="pt").to(device)
     with torch.no_grad():
         embeddings = model(**inputs).last_hidden_state.mean(dim=1)
-    return embeddings.numpy().flatten()
+    return embeddings.cpu().numpy().flatten()
 
 def upload_to_bigquery(rows, dataset_name, table_name, bq_client):
     table_id = f'{dataset_name}.{table_name}'
     try:
-        errors = bq_client.insert_rows_json(table_id, rows)
-        if errors:
-            logger.error(f"Encountered errors while inserting rows: {errors}")
+        errors = bq_client.insert_rows_json(table_id, rows, retry=retry)
     except Exception as e:
-        logger.error(e)
+        logger.error(f'{e}')
+        logger.error(f'table_id: {table_id}')
+        logger.error(f'rows: {rows}')
+        raise e
+
+    if errors:
+        logger.error(f"Encountered errors while inserting rows: {errors}")
 
 def main(project_id, bucket_name, folder_prefix, dataset_name, table_name, model_name):
     # Initialize the Google Cloud clients
@@ -31,44 +44,51 @@ def main(project_id, bucket_name, folder_prefix, dataset_name, table_name, model
     bq_client = bigquery.Client(project=project_id)
 
     # Initialize the Hugging Face model and processor
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
     processor = AutoImageProcessor.from_pretrained(model_name, use_fast=True)
-    model = AutoModel.from_pretrained(model_name)
+    model = AutoModel.from_pretrained(model_name).to(device)
 
     bucket = storage_client.bucket(bucket_name)
 
-    # List all blobs in the bucket
-    blobs = bucket.list_blobs(prefix=folder_prefix)
+    # Find only those that match the regular expression
+    blobs = [b for b in bucket.list_blobs() if b.name.startswith(folder_prefix) and b.name.endswith('.png')]
 
     # Process each image in the bucket
     rows_to_insert = []
     i = 0
+    batch_size = 500  # Set your batch size
+
     for blob in blobs:
-        if blob.name.endswith('.png'):
-            image_data = blob.download_as_bytes()
-            image = Image.open(io.BytesIO(image_data))
-            embedding = get_image_embedding(image, processor, model)
+        image_data = blob.download_as_bytes()
+        image = Image.open(io.BytesIO(image_data))
+        embedding = get_image_embedding(image, processor, model, device)
 
-            # Prepare row for BigQuery
-            row = {
-                "image_name": '/'.join(blob.name.split('/')[1:]),
-                'SeriesInstanceUID': os.path.dirname(blob.name).replace(folder_prefix, '').replace('/',''),
-                'SOPInstanceUID': os.path.basename(blob.name).replace(folder_prefix, '').replace('/',''),
-                "embedding": embedding.tolist()
-            }
-            rows_to_insert.append(row)
-            i += 1
-            if i % 100 == 0:
-                logger.info(f"Processed {i} rows")
+        # Prepare row for BigQuery
+        row = {
+            "image_name": '/'.join(blob.name.split('/')[1:]),
+            'SeriesInstanceUID': os.path.dirname(blob.name).replace(folder_prefix, '').replace('/',''),
+            'SOPInstanceUID': os.path.basename(blob.name).replace(folder_prefix, '').replace('/',''),
+            "embedding": embedding.tolist()
+        }
+        rows_to_insert.append(row)
+        i += 1
 
+        if i % batch_size == 0:
+            upload_to_bigquery(rows_to_insert, dataset_name, table_name, bq_client)
+            rows_to_insert.clear()  # Clear the batch
+            logger.info(f"Uploaded {i} rows")
 
-        # Upload embeddings to BigQuery
+    # Upload any remaining rows
+    if rows_to_insert:
         upload_to_bigquery(rows_to_insert, dataset_name, table_name, bq_client)
-        #logger.info("Embeddings uploaded successfully.")
+        logger.info(f"Uploaded remaining {len(rows_to_insert)} rows")
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Submit AI training Job to process images and store embeddings in BigQuery.')
     parser.add_argument('--bucket_name', type=str, help='Google Cloud Storage bucket name', default='capq-tcga')
-    parser.add_argument('--folder_prefix', type=str, help='Folder prefix in the bucket to look for images', default='workspace')
+    parser.add_argument('--folder_prefix', type=str, help='Folder prefix in the bucket to look for images', default='images')
     parser.add_argument('--dataset_name', type=str, help='BigQuery Dataset Name', default='tcga')
     parser.add_argument('--table_name', type=str, help='BigQuery Table Name', default='phikon')
     parser.add_argument('--model_name', type=str, help='BigQuery Dataset Name', default='owkin/phikon')

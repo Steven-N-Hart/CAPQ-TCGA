@@ -10,7 +10,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Process images and store embeddings in BigQuery.')
     parser.add_argument('--gcp_project_id', type=str, help='Google Cloud Project ID', default='correlation-aware-pq')
     parser.add_argument('--bucket_name', type=str, help='Google Cloud Storage bucket name', default='capq-tcga')
-    parser.add_argument('--folder_prefix', type=str, help='Folder prefix in the bucket to look for images', default='data')
+    parser.add_argument('--folder_prefix', type=str, help='Folder prefix in the bucket to look for images', default='images')
     parser.add_argument('--dataset_name', type=str, help='BigQuery Dataset Name', default='tcga')
     parser.add_argument('--table_name', type=str, help='BigQuery Table Name', default='phikon')
     parser.add_argument('--model_name', type=str, help='BigQuery Dataset Name', default='owkin/phikon')
@@ -19,7 +19,7 @@ if __name__ == '__main__':
     parser.add_argument('--container_uri', type=str, help='Display name for VertexAI job', default='us-docker.pkg.dev/vertex-ai/training/pytorch-gpu.1-13.py310:latest')
     parser.add_argument('--staging_bucket', type=str, help='Staging bucket', default='staging')
     parser.add_argument('--verbosity', help='Logging level',
-                        choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'], default='INFO')
+                        choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'], default='DEBUG')
     parser.add_argument('--machine_type', type=str, help='Machine type', default='n1-highmem-32')
     parser.add_argument('--replica_count', type=int, help='Number of replicas', default=12)
     parser.add_argument('--accelerator', help='Number of replicas', default='NVIDIA_TESLA_P100')
@@ -42,7 +42,7 @@ if __name__ == '__main__':
         display_name=args.display_name,
         script_path=script_path,
         container_uri=args.container_uri,
-        requirements=['transformers', 'google-cloud-storage', 'google-cloud-bigquery','google-cloud-resource-manager'],
+        requirements=['transformers', 'google-cloud-storage', 'google-cloud-bigquery', 'google-cloud-resource-manager', 'google-api-core', 'accelerate'],
         args=[
             '--bucket_name', args.bucket_name,
             '--folder_prefix', args.folder_prefix,

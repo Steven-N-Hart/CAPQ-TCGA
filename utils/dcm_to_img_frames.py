@@ -87,7 +87,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Process DICOM files and upload images to Google Cloud Storage.")
     parser.add_argument('--bq_results_csv', default='gs://capq-tcga/workspace/bq_results_df.csv', help='Path to the CSV file containing BQ results.')
     parser.add_argument('--bucket_name', default='capq-tcga', help='Name of the Google Cloud Storage bucket.')
-    parser.add_argument('--dirname', default='data', help='Directory name for storing images.')
+    parser.add_argument('--dirname', default='images', help='Directory name for storing images.')
     parser.add_argument('--verbosity', help='Logging level',
                         choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'], default='INFO')
 
