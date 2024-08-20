@@ -8,9 +8,23 @@ from PIL import Image
 import io
 import logging
 import os
+from dotenv import load_dotenv
+from huggingface_hub import login
+
 logger = logging.getLogger()
 
+#Load environment variables from .env file
+load_dotenv()
 
+# Access the HUGGINGFACE_TOKEN
+huggingface_token = os.getenv("HUGGINGFACE_TOKEN")
+
+# Log in to Hugging Face using the token
+if huggingface_token:
+    login(huggingface_token)
+    logger.info("Successfully authenticated with Hugging Face.")
+else:
+    logger.warn("HUGGINGFACE_TOKEN not found. Please check your .env file.")
 
 retry = Retry(
     initial=1.0,
@@ -46,8 +60,13 @@ def main(project_id, bucket_name, folder_prefix, dataset_name, table_name, model
     # Initialize the Hugging Face model and processor
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    processor = AutoImageProcessor.from_pretrained(model_name, use_fast=True)
-    model = AutoModel.from_pretrained(model_name).to(device)
+    try:
+        processor = AutoImageProcessor.from_pretrained(model_name, use_fast=True)
+        model = AutoModel.from_pretrained(model_name).to(device)
+    except:
+        # HIBOU-L Has some additional Requirements
+        processor = AutoImageProcessor.from_pretrained(model_name, use_fast=True, trust_remote_code=True)
+        model = AutoModel.from_pretrained(model_name, trust_remote_code=True).to(device)
 
     bucket = storage_client.bucket(bucket_name)
 
