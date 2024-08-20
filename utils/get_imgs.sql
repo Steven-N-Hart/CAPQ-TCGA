@@ -74,6 +74,7 @@ SELECT
   NumFrames,
   SeriesInstanceUID,
   StudyInstanceUID,
+  SOPInstanceUID,
   ContainerIdentifier,
   PatientID,
   TotalPixelMatrixColumns,
