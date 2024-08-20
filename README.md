@@ -30,6 +30,7 @@ It has the following columns.  The ones in bold are used in later code, so make 
 * NumFrames
 * **SeriesInstanceUID**
 * **StudyInstanceUID**
+*  **SOPInstanceUID**
 * ContainerIdentifier
 * PatientID
 * **TotalPixelMatrixColumns**
@@ -107,4 +108,14 @@ options:
                         Display name for VertexAI job
   --staging_bucket STAGING_BUCKET
                         Staging bucket
+```
+
+## Part 3. Create a model
+For simplicity, we are creating a logistic regression model to predict label, given embeddings.
+```shell
+python bq_utils\bq_build_models.py --label_column_name er_status_by_ihc
+python bq_utils\bq_build_models.py --label_column_name pr_status_by_ihc
+python bq_utils\bq_build_models.py --label_column_name HER2_newly_derived
+python bq_utils\bq_build_models.py --label_column_name Triple_Negative_Status
+python bq_utils\bq_build_models.py --label_column_name PAM50_and_Claudin_low__CLOW__Molecular_Subtype
 ```
