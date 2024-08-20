@@ -34,7 +34,7 @@ if __name__ == '__main__':
     logger.debug(f'Initializing Vertex AI with staging bucket: {staging_bucket}')
 
     aiplatform.init(project=args.gcp_project_id, location=args.location, staging_bucket=staging_bucket)
-    script_path = 'img_to_embedding.py'
+    script_path = 'utils/img_to_embedding.py'
     logger.debug(f'Script path: {script_path}')
 
     # Define and run the custom job
