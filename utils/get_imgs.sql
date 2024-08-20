@@ -4,7 +4,7 @@ WITH specimen_preparation_sequence_items AS (
     steps_unnested2.ConceptNameCodeSequence[SAFE_OFFSET(0)].CodeMeaning AS item_name,
     steps_unnested2.ConceptCodeSequence[SAFE_OFFSET(0)].CodeMeaning AS item_value
   FROM
-    `bigquery-public-data.idc_v11.dicom_all`
+    `bigquery-public-data.idc_v18.dicom_all`
     CROSS JOIN
       UNNEST(SpecimenDescriptionSequence[SAFE_OFFSET(0)].SpecimenPreparationSequence) AS steps_unnested1
     CROSS JOIN

@@ -68,7 +68,7 @@ def main(project_id, bucket_name, folder_prefix, dataset_name, table_name, model
         row = {
             "image_name": '/'.join(blob.name.split('/')[1:]),
             'SeriesInstanceUID': os.path.dirname(blob.name).replace(folder_prefix, '').replace('/',''),
-            'SOPInstanceUID': os.path.basename(blob.name).replace(folder_prefix, '').replace('/',''),
+            'SOPInstanceUID': os.path.basename(blob.name).replace(folder_prefix, '').replace('/','').split('_')[0],
             "embedding": embedding.tolist()
         }
         rows_to_insert.append(row)
