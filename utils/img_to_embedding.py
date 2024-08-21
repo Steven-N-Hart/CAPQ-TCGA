@@ -1,48 +1,22 @@
 import argparse
 from google.cloud import storage, bigquery
-from google.api_core.retry import Retry
-
-from transformers import AutoImageProcessor, AutoModel
+from model_runners.model_factory import model_factory
+import utils
 import torch
 from PIL import Image
 import io
 import logging
 import os
-from dotenv import load_dotenv
-from huggingface_hub import login
-
 logger = logging.getLogger()
 
-#Load environment variables from .env file
-load_dotenv()
 
-# Access the HUGGINGFACE_TOKEN
-huggingface_token = os.getenv("HUGGINGFACE_TOKEN")
 
-# Log in to Hugging Face using the token
-if huggingface_token:
-    login(huggingface_token)
-    logger.info("Successfully authenticated with Hugging Face.")
-else:
-    logger.warn("HUGGINGFACE_TOKEN not found. Please check your .env file.")
 
-retry = Retry(
-    initial=1.0,
-    maximum=10.0,
-    multiplier=2.0,
-    deadline=60.0,
-)
-
-def get_image_embedding(image, processor, model, device):
-    inputs = processor(images=image, return_tensors="pt").to(device)
-    with torch.no_grad():
-        embeddings = model(**inputs).last_hidden_state.mean(dim=1)
-    return embeddings.cpu().numpy().flatten()
 
 def upload_to_bigquery(rows, dataset_name, table_name, bq_client):
     table_id = f'{dataset_name}.{table_name}'
     try:
-        errors = bq_client.insert_rows_json(table_id, rows, retry=retry)
+        errors = bq_client.insert_rows_json(table_id, rows, retry=utils.retry)
     except Exception as e:
         logger.error(f'{e}')
         logger.error(f'table_id: {table_id}')
@@ -59,15 +33,7 @@ def main(project_id, bucket_name, folder_prefix, dataset_name, table_name, model
 
     # Initialize the Hugging Face model and processor
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    try:
-        processor = AutoImageProcessor.from_pretrained(model_name, use_fast=True)
-        model = AutoModel.from_pretrained(model_name).to(device)
-    except:
-        # HIBOU-L Has some additional Requirements
-        processor = AutoImageProcessor.from_pretrained(model_name, use_fast=True, trust_remote_code=True)
-        model = AutoModel.from_pretrained(model_name, trust_remote_code=True).to(device)
-
+    model, processor, get_image_embedding = model_factory(model_name=model_name)
     bucket = storage_client.bucket(bucket_name)
 
     # Find only those that match the regular expression

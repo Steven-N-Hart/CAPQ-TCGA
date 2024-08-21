@@ -1,9 +1,16 @@
 # noinspection PyPackageRequirements
 from google.cloud import storage
+from google.api_core.retry import Retry
 import logging
 
 logger = logging.getLogger()
 
+retry = Retry(
+    initial=1.0,
+    maximum=10.0,
+    multiplier=2.0,
+    deadline=60.0,
+)
 
 def download_public_file(bucket_name, source_blob_name, destination_file_name, local=True):
     """Downloads a public blob from the bucket."""
@@ -56,8 +63,3 @@ def copy_blob_using_rewrite(source_bucket_name, source_blob_name, destination_bu
             break
     logger.info('Completed copy of %s to %s', source_blob_name, destination_blob_name)
 
-
-def write_array_to_bucket(bucket_name):
-    # Instantiates a client
-    storage_client = storage.Client()
-    bucket = client.bucket(bucket_name)

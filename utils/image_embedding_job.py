@@ -1,10 +1,8 @@
 from google.cloud import aiplatform
 import logging
 import argparse
+
 logger = logging.getLogger()
-
-
-logging.basicConfig(level=logging.DEBUG)  # Set logging level to DEBUG
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Process images and store embeddings in BigQuery.')
@@ -42,7 +40,7 @@ if __name__ == '__main__':
         display_name=args.display_name,
         script_path=script_path,
         container_uri=args.container_uri,
-        requirements=['transformers', 'google-cloud-storage', 'google-cloud-bigquery', 'google-cloud-resource-manager', 'google-api-core', 'accelerate','python-dotenv'],
+        requirements=['transformers', 'google-cloud-storage', 'google-cloud-bigquery', 'google-cloud-resource-manager', 'google-api-core', 'accelerate','python-dotenv', 'huggingface_hub'],
         args=[
             '--bucket_name', args.bucket_name,
             '--folder_prefix', args.folder_prefix,
