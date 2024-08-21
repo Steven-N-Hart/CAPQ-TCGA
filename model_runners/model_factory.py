@@ -2,6 +2,7 @@ import logging
 import os
 from model_runners.Autoclass import AutoclassLoader
 from model_runners.virchow2 import VirchowLoader
+from model_runners.conch import ConchLoader
 from dotenv import load_dotenv
 from huggingface_hub import login
 
@@ -32,6 +33,7 @@ def model_factory(model_name=None):
         * Supported model names include:
             'owkin/phikon'
             'paige-ai/Virchow2'
+            'MahmoodLab/conch'
         * If model_name is None or an unsupported model name, an error will be raised.
 
     Returns:
@@ -58,6 +60,11 @@ def model_factory(model_name=None):
 
     elif model_name == 'paige-ai/Virchow2':
         model_class = VirchowLoader()
+        processor, model = model_class.get_processor_and_model()
+        return model, processor, model_class.get_image_embedding
+
+    elif model_name == 'MahmoodLab/conch':
+        model_class = ConchLoader(hf_token=huggingface_token)
         processor, model = model_class.get_processor_and_model()
         return model, processor, model_class.get_image_embedding
 
