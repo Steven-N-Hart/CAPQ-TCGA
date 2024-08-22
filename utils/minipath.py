@@ -235,7 +235,7 @@ class Minipath:
 
 
 class MagPairs:
-    def __init__(self, low_mag_dcm, img_to_use_at_low_mag=None, bq_results_df=None):
+    def __init__(self, low_mag_dcm, img_to_use_at_low_mag=None, bq_results_df=None, all_frames=False):
         self.low_mag_dcm = self._load_dcm(low_mag_dcm)
         self.high_mag_dcm = self._load_dcm(self.get_local_dcm_pair(low_mag_dcm, bq_results_df))
         self.low_mag_img = get_single_dcm_img(low_mag_dcm)
@@ -245,7 +245,7 @@ class MagPairs:
         self.fd = self.get_frame_dict(self.high_mag_dcm)
         self.minmax_list = self.get_minmax(img_to_use_at_low_mag)
         self.high_mag_frame_list = [
-            self.find_intersecting_frames(self.fd, m['x_min'], m['x_max'], m['y_min'], m['y_max']) for m in
+            self.find_intersecting_frames(self.fd, m['x_min'], m['x_max'], m['y_min'], m['y_max'], all_frames) for m in
             self.minmax_list]
         self.high_mag_frames = self.frame_extraction(self.high_mag_dcm, self.high_mag_frame_list)
         self.clean_high_mag_frames = [frame for frame in self.high_mag_frames if self.is_foreground(frame['img_array'])]
@@ -272,8 +272,9 @@ class MagPairs:
             for j in high_mag_frame:
                 frame_id = j['frame']
                 j['img_array'] = pixel_array[frame_id]
-                img_array_list.append(j)
-        return img_array_list
+                #img_array_list.append(j)
+                yield j     #TODO: Test if this works as a generator or uncomment the return
+        #return img_array_list
 
     @staticmethod
     def get_local_name(gcs_url, data_dir):
@@ -281,7 +282,7 @@ class MagPairs:
         return os.path.join(data_dir, blob)
 
     @staticmethod
-    def find_intersecting_frames(fd, x_min, x_max, y_min, y_max):
+    def find_intersecting_frames(fd, x_min, x_max, y_min, y_max, all_frames):
         """
         Find all frames that intersect with the given coordinates.
 
@@ -289,6 +290,7 @@ class MagPairs:
         - fd: List of dictionaries with frame data containing 'row_min', 'row_max', 'col_min', 'col_max', and 'frame'.
         - x_min, x_max: x-coordinate range to check for intersection.
         - y_min, y_max: y-coordinate range to check for intersection.
+        - all_frames: whether or not to return all frames, regardless of intersecting coordinates. (i.e. no filtering)
 
         Returns:
         - List of dictionaries that intersect with the given coordinates.
@@ -302,7 +304,7 @@ class MagPairs:
             col_max = frame_data['col_max']
 
             # Check for intersection in both x and y ranges
-            if (x_min <= col_max and x_max >= col_min) and (y_min <= row_max and y_max >= row_min):
+            if (x_min <= col_max and x_max >= col_min) and (y_min <= row_max and y_max >= row_min) or all_frames:
                 intersecting_frames.append(frame_data)
 
         return intersecting_frames

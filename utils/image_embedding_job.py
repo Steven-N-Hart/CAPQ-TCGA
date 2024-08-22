@@ -1,6 +1,9 @@
 from google.cloud import aiplatform
 import logging
 import argparse
+from dotenv import load_dotenv
+load_dotenv()
+import os
 
 logger = logging.getLogger()
 
@@ -38,6 +41,7 @@ if __name__ == '__main__':
     # Define and run the custom job
     job = aiplatform.CustomJob.from_local_script(
         display_name=args.display_name,
+        environment_variables={"HUGGINGFACE_TOKEN": os.environ['HUGGINGFACE_TOKEN']},
         script_path=script_path,
         container_uri=args.container_uri,
         requirements=['transformers', 'google-cloud-storage', 'google-cloud-bigquery', 'google-cloud-resource-manager', 'google-api-core', 'accelerate','python-dotenv', 'huggingface_hub', 'dpfm_factory', 'conch_fork'],
