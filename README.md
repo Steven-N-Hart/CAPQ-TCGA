@@ -79,7 +79,10 @@ options:
 ## Part 2. Compute Embeddings an targeted patches
 Now that a GCS Bucket exists with PNG files, we can iterate through each of them, create and embedding, and store 
 the results in a BigQuery Table.
+
 ```shell
+
+#TODO: This will fail if table hasn't been first manually created
 python utils/image_embedding_job.py -h
 
 usage: image_embedding_job.py [-h] [--gcp_project_id GCP_PROJECT_ID] [--bucket_name BUCKET_NAME] [--folder_prefix FOLDER_PREFIX] [--dataset_name DATASET_NAME] [--table_name TABLE_NAME] [--model_name MODEL_NAME]
