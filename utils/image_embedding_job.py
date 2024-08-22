@@ -14,7 +14,7 @@ if __name__ == '__main__':
     parser.add_argument('--model_name', type=str, help='BigQuery Dataset Name', default='owkin/phikon')
     parser.add_argument('--location', type=str, help='Google Cloud Storage bucket location', default='us-central1')
     parser.add_argument('--display_name', type=str, help='Display name for VertexAI job', default='image-embedding-job')
-    parser.add_argument('--container_uri', type=str, help='Display name for VertexAI job', default='us-docker.pkg.dev/vertex-ai/training/pytorch-gpu.1-13.py310:latest')
+    parser.add_argument('--container_uri', type=str, help='Display name for VertexAI job', default='gcr.io/correlation-aware-pq/img_to_embeddings_job:latest')
     parser.add_argument('--staging_bucket', type=str, help='Staging bucket', default='staging')
     parser.add_argument('--verbosity', help='Logging level',
                         choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'], default='DEBUG')
@@ -40,7 +40,7 @@ if __name__ == '__main__':
         display_name=args.display_name,
         script_path=script_path,
         container_uri=args.container_uri,
-        requirements=['transformers', 'google-cloud-storage', 'google-cloud-bigquery', 'google-cloud-resource-manager', 'google-api-core', 'accelerate','python-dotenv', 'huggingface_hub'],
+        requirements=['transformers', 'google-cloud-storage', 'google-cloud-bigquery', 'google-cloud-resource-manager', 'google-api-core', 'accelerate','python-dotenv', 'huggingface_hub', 'dpfm_factory', 'conch_fork'],
         args=[
             '--bucket_name', args.bucket_name,
             '--folder_prefix', args.folder_prefix,

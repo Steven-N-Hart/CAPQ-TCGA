@@ -1,22 +1,30 @@
 import argparse
 from google.cloud import storage, bigquery
-from model_runners.model_factory import model_factory
-import utils
+from google.api_core.retry import Retry
 import torch
 from PIL import Image
 import io
 import logging
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
+from dpfm_model_runners.model_factory import model_factory  # Can't load until HuggingFace token is exposed
+
 logger = logging.getLogger()
 
-
-
+retry = Retry(
+    initial=1.0,
+    maximum=10.0,
+    multiplier=2.0,
+    deadline=60.0,
+)
 
 
 def upload_to_bigquery(rows, dataset_name, table_name, bq_client):
     table_id = f'{dataset_name}.{table_name}'
     try:
-        errors = bq_client.insert_rows_json(table_id, rows, retry=utils.retry)
+        errors = bq_client.insert_rows_json(table_id, rows, retry=retry)
     except Exception as e:
         logger.error(f'{e}')
         logger.error(f'table_id: {table_id}')
@@ -25,6 +33,7 @@ def upload_to_bigquery(rows, dataset_name, table_name, bq_client):
 
     if errors:
         logger.error(f"Encountered errors while inserting rows: {errors}")
+
 
 def main(project_id, bucket_name, folder_prefix, dataset_name, table_name, model_name):
     # Initialize the Google Cloud clients
@@ -52,8 +61,8 @@ def main(project_id, bucket_name, folder_prefix, dataset_name, table_name, model
         # Prepare row for BigQuery
         row = {
             "image_name": '/'.join(blob.name.split('/')[1:]),
-            'SeriesInstanceUID': os.path.dirname(blob.name).replace(folder_prefix, '').replace('/',''),
-            'SOPInstanceUID': os.path.basename(blob.name).replace(folder_prefix, '').replace('/','').split('_')[0],
+            'SeriesInstanceUID': os.path.dirname(blob.name).replace(folder_prefix, '').replace('/', ''),
+            'SOPInstanceUID': os.path.basename(blob.name).replace(folder_prefix, '').replace('/', '').split('_')[0],
             "embedding": embedding.tolist()
         }
         rows_to_insert.append(row)
@@ -71,12 +80,16 @@ def main(project_id, bucket_name, folder_prefix, dataset_name, table_name, model
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Submit AI training Job to process images and store embeddings in BigQuery.')
+    parser = argparse.ArgumentParser(
+        description='Submit AI training Job to process images and store embeddings in BigQuery.')
     parser.add_argument('--bucket_name', type=str, help='Google Cloud Storage bucket name', default='capq-tcga')
-    parser.add_argument('--folder_prefix', type=str, help='Folder prefix in the bucket to look for images', default='images')
+    parser.add_argument('--folder_prefix', type=str, help='Folder prefix in the bucket to look for images',
+                        default='images')
     parser.add_argument('--dataset_name', type=str, help='BigQuery Dataset Name', default='tcga')
     parser.add_argument('--table_name', type=str, help='BigQuery Table Name', default='phikon')
-    parser.add_argument('--model_name', type=str, help='Hugging Face Model Name', default='owkin/phikon')
+    parser.add_argument('--model_name', type=str, help='Hugging Face Model Name', default='owkin/phikon',
+                        choices=['owkin/phikon', 'paige-ai/Virchow2', 'MahmoodLab/conch',
+                                 'prov-gigapath/prov-gigapath'])
     parser.add_argument('--project_id', type=str, help='Project ID', default='correlation-aware-pq')
     parser.add_argument('--verbosity', help='Logging level',
                         choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'], default='INFO')

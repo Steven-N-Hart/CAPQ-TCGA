@@ -1,5 +1,4 @@
 gcsfs
-git+https://github.com/Mahmoodlab/CONCH.git
 google-auth
 google-cloud-aiplatform
 google-cloud-bigquery
@@ -21,3 +20,4 @@ timm
 tqdm
 torch
 transformers
+dpfm_factory
