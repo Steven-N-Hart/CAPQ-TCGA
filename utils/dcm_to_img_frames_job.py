@@ -46,7 +46,8 @@ if __name__ == '__main__':
         project=args.gcp_project_id,
         location=args.location,
         machine_type=args.machine_type,
-        replica_count=args.replica_count
+        replica_count=args.replica_count,
+        labels={"display_name": args.display_name},
         )
 
     logger.debug(f'Submitting job...')
