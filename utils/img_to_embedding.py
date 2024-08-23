@@ -17,12 +17,35 @@ retry = Retry(
     initial=1.0,
     maximum=10.0,
     multiplier=2.0,
-    deadline=60.0,
+    deadline=120.0,
 )
 
+def create_bigquery_table_if_not_exists(table_name, bq_client):
+    table = bigquery.Table(table_name)
 
-def upload_to_bigquery(rows, dataset_name, table_name, bq_client):
-    table_id = f'{dataset_name}.{table_name}'
+    schema = [
+        bigquery.SchemaField("image_name", "STRING"),
+        bigquery.SchemaField("SeriesInstanceUID", "STRING"),
+        bigquery.SchemaField("SOPInstanceUID", "STRING"),
+        bigquery.SchemaField("embedding", "FLOAT64", mode="REPEATED"),
+    ]
+
+    table.schema = schema
+
+    try:
+        bq_client.get_table(table_name)  # Check if the table exists
+        logger.info(f"Table {table_name} already exists.")
+    except Exception:
+        # Table does not exist, create it
+        table = bq_client.create_table(table)
+        logger.info(f"Table {table_name} created.")
+
+def upload_to_bigquery(rows, dataset_name, table_name, bq_client, project_id):
+    table_id = f'{project_id}.{dataset_name}.{table_name}'
+
+    # Ensure the table exists before inserting data
+    create_bigquery_table_if_not_exists(table_id, bq_client)
+
     try:
         errors = bq_client.insert_rows_json(table_id, rows, retry=retry)
     except Exception as e:
@@ -35,7 +58,7 @@ def upload_to_bigquery(rows, dataset_name, table_name, bq_client):
         logger.error(f"Encountered errors while inserting rows: {errors}")
 
 
-def main(project_id, bucket_name, folder_prefix, dataset_name, table_name, model_name):
+def main(project_id, bucket_name, folder_prefix, dataset_name, table_name, model_name, batch_size):
     # Initialize the Google Cloud clients
     storage_client = storage.Client()
     bq_client = bigquery.Client(project=project_id)
@@ -51,7 +74,6 @@ def main(project_id, bucket_name, folder_prefix, dataset_name, table_name, model
     # Process each image in the bucket
     rows_to_insert = []
     i = 0
-    batch_size = 500  # Set your batch size
 
     for blob in blobs:
         image_data = blob.download_as_bytes()
@@ -69,13 +91,13 @@ def main(project_id, bucket_name, folder_prefix, dataset_name, table_name, model
         i += 1
 
         if i % batch_size == 0:
-            upload_to_bigquery(rows_to_insert, dataset_name, table_name, bq_client)
+            upload_to_bigquery(rows_to_insert, dataset_name, table_name, bq_client, project_id)
             rows_to_insert.clear()  # Clear the batch
             logger.info(f"Uploaded {i} rows")
 
     # Upload any remaining rows
     if rows_to_insert:
-        upload_to_bigquery(rows_to_insert, dataset_name, table_name, bq_client)
+        upload_to_bigquery(rows_to_insert, dataset_name, table_name, bq_client, project_id)
         logger.info(f"Uploaded remaining {len(rows_to_insert)} rows")
 
 
@@ -91,10 +113,11 @@ if __name__ == '__main__':
                         choices=['owkin/phikon', 'paige-ai/Virchow2', 'MahmoodLab/conch',
                                  'prov-gigapath/prov-gigapath'])
     parser.add_argument('--project_id', type=str, help='Project ID', default='correlation-aware-pq')
+    parser.add_argument('--batch_size', type=int, help='Batch size to insert into BQ', default=500)
     parser.add_argument('--verbosity', help='Logging level',
                         choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'], default='INFO')
 
     args = parser.parse_args()
     logger.setLevel(args.verbosity)
 
-    main(args.project_id, args.bucket_name, args.folder_prefix, args.dataset_name, args.table_name, args.model_name)
+    main(args.project_id, args.bucket_name, args.folder_prefix, args.dataset_name, args.table_name, args.model_name, args.batch_size)

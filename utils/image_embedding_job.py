@@ -15,6 +15,7 @@ if __name__ == '__main__':
     parser.add_argument('--dataset_name', type=str, help='BigQuery Dataset Name', default='tcga')
     parser.add_argument('--table_name', type=str, help='BigQuery Table Name', default='phikon')
     parser.add_argument('--model_name', type=str, help='BigQuery Dataset Name', default='owkin/phikon')
+    parser.add_argument('--batch_size', type=int, help='Batch size to insert into BQ', default=500)
     parser.add_argument('--location', type=str, help='Google Cloud Storage bucket location', default='us-central1')
     parser.add_argument('--display_name', type=str, help='Display name for VertexAI job', default='image-embedding-job')
     parser.add_argument('--container_uri', type=str, help='Display name for VertexAI job', default='gcr.io/correlation-aware-pq/img_to_embeddings_job:latest')
@@ -51,6 +52,7 @@ if __name__ == '__main__':
             '--dataset_name', args.dataset_name,
             '--table_name', args.table_name,
             '--model_name', args.model_name,
+            '--batch_size', str(args.batch_size)
         ],
         project=args.gcp_project_id,
         location=args.location,
