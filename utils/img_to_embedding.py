@@ -33,8 +33,8 @@ def create_bigquery_table_if_not_exists(table_name, bq_client):
     table.schema = schema
 
     try:
-        bq_client.get_table(table_name)  # Check if the table exists
-        logger.info(f"Table {table_name} already exists.")
+        bq_client.get_table(table)  # Check if the table exists
+        logger.info(f"Table {table} already exists.")
     except Exception:
         # Table does not exist, create it
         table = bq_client.create_table(table)
