@@ -31,7 +31,7 @@ def parse_args():
 def read_file(f):
     if f.endswith('.csv'):
         file_object = pd.read_csv(f)
-        elif f.endswith('.xlsx'):
+    elif f.endswith('.xlsx'):
         file_object = pd.read_excel(f)
     elif f.endswith('.xls'):
         file_object = pd.read_excel(f)
@@ -65,25 +65,43 @@ if __name__ == '__main__':
 
     # Sanitize the column names
     merged_df.columns = [sanitize_column_name(col) for col in merged_df.columns]
+    # Clean the data
+    replacements = {
+        'HER2_newly_derived': ['Indeterminate', 'CopyNum Not Available'],
+        'er_status_by_ihc': ['Indeterminate', '[Not Evaluated]'],
+        'pr_status_by_ihc': ['Indeterminate', '[Not Evaluated]']
+    }
+
+    # Replace values with None (null)
+    merged_df.replace(replacements, None, inplace=True)
 
     # Convert the DataFrame to a BigQuery table
+    # Define the table ID
+    table_id = f'{args.gcp_project_id}.{args.dataset_id}.{args.new_table_id}'
+    # Attempt to delete the table if it exists
+    try:
+        client.delete_table(table_id)
+        logging.debug(f"Deleted table {table_id}.")
+    except:
+        logging.debug(f"Table {table_id} not found, no deletion necessary.")
+
     job = client.load_table_from_dataframe(merged_df, f'{args.gcp_project_id}.{args.dataset_id}.{args.new_table_id}')
 
     # Wait for the job to complete
     job.result()
-    logging.info(f"Loaded {job.output_rows} rows into {dataset_id}.{new_table_id}.")
+    logging.info(f"Loaded {job.output_rows} rows into {args.dataset_id}.{args.new_table_id}.")
 
     # Now perform the join directly in BigQuery and overwrite the clinical_data table
     query = f"""
         CREATE OR REPLACE TABLE `{args.gcp_project_id}.{args.dataset_id}.{args.new_table_id}` AS
-        SELECT clinical_data.*, phikon.image_name, phikon.embedding
+        SELECT clinical_data.*, {args.embedding_table_id}.image_name, {args.embedding_table_id}.embedding AS embedding_{args.embedding_table_id}
         FROM `{args.gcp_project_id}.{args.dataset_id}.{args.new_table_id}` AS clinical_data
-        LEFT JOIN `{args.gcp_project_id}.{args.dataset_id}.{args.embedding_table_id}` AS phikon
-        ON clinical_data.SOPInstanceUID = phikon.SOPInstanceUID
+        LEFT JOIN `{args.gcp_project_id}.{args.dataset_id}.{args.embedding_table_id}` AS {args.embedding_table_id}
+        ON clinical_data.SOPInstanceUID = {args.embedding_table_id}.SOPInstanceUID
     """
 
     # Execute the query to overwrite the clinical_data table
     query_job = client.query(query)
     query_job.result()  # Wait for the query to finish
 
-    logging.info(f"Table `{dataset_id}.{new_table_id}` has been updated with the merged data.")
+    logging.info(f"Table `{args.dataset_id}.{args.new_table_id}` has been updated with the merged data.")

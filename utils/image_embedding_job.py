@@ -60,7 +60,7 @@ if __name__ == '__main__':
         replica_count=args.replica_count,
         accelerator_count=args.accelerator_count,
         accelerator_type=args.accelerator,
-        labels={"display_name": args.display_name},
+        labels={"display_name": args.display_name.lower().replace(" ", "_")},
     )
     logger.debug(f'Submitting job...')
     job.run()

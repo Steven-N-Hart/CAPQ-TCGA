@@ -111,7 +111,7 @@ if __name__ == '__main__':
     parser.add_argument('--table_name', type=str, help='BigQuery Table Name', default='phikon')
     parser.add_argument('--model_name', type=str, help='Hugging Face Model Name', default='owkin/phikon',
                         choices=['owkin/phikon', 'paige-ai/Virchow2', 'MahmoodLab/conch',
-                                 'prov-gigapath/prov-gigapath'])
+                                 'prov-gigapath/prov-gigapath', 'LGAI-EXAONE/EXAONEPath','histai/hibou-L','histai/hibou-b'])
     parser.add_argument('--project_id', type=str, help='Project ID', default='correlation-aware-pq')
     parser.add_argument('--batch_size', type=int, help='Batch size to insert into BQ', default=500)
     parser.add_argument('--verbosity', help='Logging level',
