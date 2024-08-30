@@ -65,6 +65,9 @@ def main(project_id, bucket_name, folder_prefix, dataset_name, table_name, model
 
     # Initialize the Hugging Face model and processor
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Device:{device}")
+
+    device = torch.device("cuda")
     model, processor, get_image_embedding = model_factory(model_name=model_name)
     bucket = storage_client.bucket(bucket_name)
 
@@ -78,6 +81,7 @@ def main(project_id, bucket_name, folder_prefix, dataset_name, table_name, model
     for blob in blobs:
         image_data = blob.download_as_bytes()
         image = Image.open(io.BytesIO(image_data))
+        print(f"Device going into model:{device}")
         embedding = get_image_embedding(image, processor, model, device)
 
         # Prepare row for BigQuery

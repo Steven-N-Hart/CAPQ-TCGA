@@ -30,7 +30,7 @@ It has the following columns.  The ones in bold are used in later code, so make 
 * NumFrames
 * **SeriesInstanceUID**
 * **StudyInstanceUID**
-*  **SOPInstanceUID**
+* **SOPInstanceUID**
 * ContainerIdentifier
 * PatientID
 * **TotalPixelMatrixColumns**
