@@ -24,7 +24,7 @@ def get_embedding_length(client, project_id, dataset_id, table_name, embedding_c
 
 
 
-def create_regression_model(project_id, dataset_id, table_name, model_name, label_column, embedding_column, model_type):
+def create_regression_model(project_id, dataset_id, table_name, model_name, label_column, embedding_column, model_type, model_iterations):
     # Initialize the BigQuery client
     client = bigquery.Client(project=project_id)
 
@@ -39,8 +39,11 @@ def create_regression_model(project_id, dataset_id, table_name, model_name, labe
     create_model_query = f"""
         CREATE OR REPLACE MODEL `{project_id}.{dataset_id}.{model_name}`
         OPTIONS(
-        model_type='{model_type}',
-        input_label_cols=['{label_column}']
+            model_type='{model_type}',
+            input_label_cols=['{label_column}'],
+            NUM_TRIALS={model_iterations},
+            DATA_SPLIT_METHOD='RANDOM',
+            AUTO_CLASS_WEIGHTS=TRUE
         ) AS
         SELECT
           {flattened_columns},  -- Use the entire embedding array as a feature
@@ -68,12 +71,13 @@ if __name__ == "__main__":
     parser.add_argument('--project_id', default='correlation-aware-pq', help="Your Google Cloud project ID")
     parser.add_argument('--dataset_id', default='tcga', help="The BigQuery dataset ID")
     parser.add_argument('--table_name', default='clinical_data', help="The BigQuery table name containing the data")
-    parser.add_argument('--embedding_column_name', default='embedding_phikon', help="The BigQuery table name containing the data")
-    parser.add_argument('--label_column_name', default='er_status_by_ihc', help="The BigQuery table name containing the data", required=True)
+    parser.add_argument('--embedding_column_name', default='embedding', help="The BigQuery column name containing the embedding data")
+    parser.add_argument('--label_column_name', default='pr_status_by_ihc', help="The BigQuery column name containing the label", required=True)
 
     parser.add_argument('--model_name', default=None, help="The name for the model to be created in BigQuery")
     parser.add_argument('--model_type', default='LOGISTIC_REG', help="The type of model to be created.",
                         choices=['LINEAR_REG', 'LOGISTIC_REG'])
+    parser.add_argument('--model_iterations', default=1, type=int, help="Number of trials to perform")
     parser.add_argument('--verbosity', help='Logging level',
                         choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'], default='INFO')
     args = parser.parse_args()
@@ -84,6 +88,6 @@ if __name__ == "__main__":
 
 
     if args.model_type == 'LINEAR_REG' or args.model_type == 'LOGISTIC_REG':
-        create_regression_model(args.project_id, args.dataset_id, args.table_name, args.model_name, args.label_column_name, args.embedding_column_name, args.model_type)
+        create_regression_model(args.project_id, args.dataset_id, args.table_name, args.model_name, args.label_column_name, args.embedding_column_name, args.model_type, args.model_iterations)
     else:
         raise NotImplemented

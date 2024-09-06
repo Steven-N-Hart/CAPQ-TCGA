@@ -94,7 +94,7 @@ if __name__ == '__main__':
     # Now perform the join directly in BigQuery and overwrite the clinical_data table
     query = f"""
         CREATE OR REPLACE TABLE `{args.gcp_project_id}.{args.dataset_id}.{args.new_table_id}` AS
-        SELECT clinical_data.*, {args.embedding_table_id}.image_name, {args.embedding_table_id}.embedding AS embedding_{args.embedding_table_id}
+        SELECT clinical_data.*, {args.embedding_table_id}.image_name, {args.embedding_table_id}.embedding AS embedding
         FROM `{args.gcp_project_id}.{args.dataset_id}.{args.new_table_id}` AS clinical_data
         LEFT JOIN `{args.gcp_project_id}.{args.dataset_id}.{args.embedding_table_id}` AS {args.embedding_table_id}
         ON clinical_data.SOPInstanceUID = {args.embedding_table_id}.SOPInstanceUID

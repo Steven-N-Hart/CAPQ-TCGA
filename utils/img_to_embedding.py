@@ -1,6 +1,8 @@
 import argparse
 from google.cloud import storage, bigquery
 from google.api_core.retry import Retry
+from google.api_core.exceptions import Conflict, NotFound  # Import the Conflict and NotFound exceptions
+
 import torch
 from PIL import Image
 import io
@@ -20,25 +22,30 @@ retry = Retry(
     deadline=120.0,
 )
 
+
 def create_bigquery_table_if_not_exists(table_name, bq_client):
-    table = bigquery.Table(table_name)
-
-    schema = [
-        bigquery.SchemaField("image_name", "STRING"),
-        bigquery.SchemaField("SeriesInstanceUID", "STRING"),
-        bigquery.SchemaField("SOPInstanceUID", "STRING"),
-        bigquery.SchemaField("embedding", "FLOAT64", mode="REPEATED"),
-    ]
-
-    table.schema = schema
-
     try:
-        bq_client.get_table(table)  # Check if the table exists
-        logger.info(f"Table {table} already exists.")
-    except Exception:
+        # Check if the table exists
+        bq_client.get_table(table_name)
+        logger.info(f"Table {table_name} already exists.")
+    except NotFound:
         # Table does not exist, create it
-        table = bq_client.create_table(table)
-        logger.info(f"Table {table_name} created.")
+        schema = [
+            bigquery.SchemaField("image_name", "STRING"),
+            bigquery.SchemaField("SeriesInstanceUID", "STRING"),
+            bigquery.SchemaField("SOPInstanceUID", "STRING"),
+            bigquery.SchemaField("embedding", "FLOAT64", mode="REPEATED"),
+        ]
+        table = bigquery.Table(table_name, schema=schema)
+        try:
+            bq_client.create_table(table)
+            logger.info(f"Table {table_name} created.")
+        except Conflict:
+            # Handle the case where the table was created by another process
+            logger.info(f"Table {table_name} was already created by another process.")
+        except Exception as e:
+            logger.error(f"Error creating table {table_name}: {e}")
+            raise e
 
 def upload_to_bigquery(rows, dataset_name, table_name, bq_client, project_id):
     table_id = f'{project_id}.{dataset_name}.{table_name}'
