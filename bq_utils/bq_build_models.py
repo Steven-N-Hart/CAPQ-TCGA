@@ -39,9 +39,11 @@ def create_regression_model(project_id, dataset_id, table_name, model_name, labe
     create_model_query = f"""
         CREATE OR REPLACE MODEL `{project_id}.{dataset_id}.{model_name}`
         OPTIONS(
-        model_type='{model_type}',
-        input_label_cols=['{label_column}'],
-        NUM_TRIALS={model_iterations}
+            model_type='{model_type}',
+            input_label_cols=['{label_column}'],
+            NUM_TRIALS={model_iterations},
+            DATA_SPLIT_METHOD='RANDOM',
+            AUTO_CLASS_WEIGHTS=TRUE
         ) AS
         SELECT
           {flattened_columns},  -- Use the entire embedding array as a feature
@@ -70,12 +72,12 @@ if __name__ == "__main__":
     parser.add_argument('--dataset_id', default='tcga', help="The BigQuery dataset ID")
     parser.add_argument('--table_name', default='clinical_data', help="The BigQuery table name containing the data")
     parser.add_argument('--embedding_column_name', default='embedding', help="The BigQuery column name containing the embedding data")
-    parser.add_argument('--label_column_name', default='er_status_by_ihc', help="The BigQuery column name containing the label", required=True)
+    parser.add_argument('--label_column_name', default='pr_status_by_ihc', help="The BigQuery column name containing the label", required=True)
 
     parser.add_argument('--model_name', default=None, help="The name for the model to be created in BigQuery")
     parser.add_argument('--model_type', default='LOGISTIC_REG', help="The type of model to be created.",
                         choices=['LINEAR_REG', 'LOGISTIC_REG'])
-    parser.add_argument('--model_iterations', default=5, type=int, help="Number of trials to perform")
+    parser.add_argument('--model_iterations', default=1, type=int, help="Number of trials to perform")
     parser.add_argument('--verbosity', help='Logging level',
                         choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'], default='INFO')
     args = parser.parse_args()
