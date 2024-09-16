@@ -12,6 +12,7 @@ if __name__ == '__main__':
     parser.add_argument('--bq_results_csv', type=str, help='Path to the CSV file containing BQ results.', default='gs://capq-tcga/workspace/bq_results_df.csv')
     parser.add_argument('--bucket_name', type=str, help='Google Cloud Storage bucket name', default='capq-tcga')
     parser.add_argument('--dirname', type=str, help='Directory name for storing images.', default='data')
+    parser.add_argument('--no-subset', dest='subset', action='store_false', help='Extract all foreground patches if set.')
     parser.add_argument('--location', type=str, help='Google Cloud Storage bucket location', default='us-central1')
     parser.add_argument('--display_name', type=str, help='Display name for Vertex AI job', default='dicom-processing-job')
     parser.add_argument('--container_uri', type=str, help='Display name for VertexAI job', default='gcr.io/correlation-aware-pq/dcm_to_img_frames_job:latest')
@@ -31,6 +32,15 @@ if __name__ == '__main__':
     aiplatform.init(project=args.gcp_project_id, location=args.location, staging_bucket=staging_bucket)
     script_path = 'dcm_to_img_frames.py'
     logger.debug(f'Script path: {script_path}')
+    # Define the job arguments, including the subset flag
+    job_args = [
+        '--bq_results_csv', args.bq_results_csv,
+        '--bucket_name', args.bucket_name,
+        '--dirname', args.dirname,
+    ]
+
+    if not args.subset:
+        job_args.append('--no-subset')
 
     # Define and run the custom job
     job = aiplatform.CustomJob.from_local_script(
@@ -38,11 +48,7 @@ if __name__ == '__main__':
         script_path=script_path,
         container_uri=args.container_uri,
         requirements=['pandas', 'Pillow', 'google-cloud-storage', 'pydicom'],
-        args=[
-            '--bq_results_csv', args.bq_results_csv,
-            '--bucket_name', args.bucket_name,
-            '--dirname', args.dirname,
-        ],
+        args=job_args,
         project=args.gcp_project_id,
         location=args.location,
         machine_type=args.machine_type,
